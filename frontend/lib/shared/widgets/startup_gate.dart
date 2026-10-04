@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/allocations/providers/allocation_provider.dart';
+import 'package:frontend/feature/allocation_setup/providers/allocation_setup_provider.dart';
 
 class StartupGate extends ConsumerStatefulWidget {
   const StartupGate({super.key});
