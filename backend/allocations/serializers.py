@@ -226,3 +226,34 @@ class AllocationSetupResponseSerializer(
             ),
             "status": allocation.status,
         }
+
+class AllocationSetupStatusSerializer(
+    serializers.Serializer
+):
+    setup_complete = serializers.BooleanField()
+
+    has_successful_deposit = (
+        serializers.BooleanField()
+    )
+
+    has_unallocated_deposit = (
+        serializers.BooleanField()
+    )
+
+    latest_deposit_id = (
+        serializers.CharField(
+            allow_null=True
+        )
+    )
+
+    allocation_id = (
+        serializers.CharField(
+            allow_null=True
+        )
+    )
+
+    spend = serializers.DictField()
+
+    save = serializers.DictField()
+
+    grow = serializers.DictField()

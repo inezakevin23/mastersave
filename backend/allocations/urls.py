@@ -25,4 +25,9 @@ urlpatterns = [
         AllocationDetailView.as_view(),
         name="allocation-detail",
     ),
+    path(
+        "status/",
+        AllocationSetupStatusView.as_view(),
+        name="allocation-setup-status",
+    ),
 ]

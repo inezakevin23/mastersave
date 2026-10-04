@@ -1,12 +1,11 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
 from deposits.models import Deposit
 from savings.models import SavingsBucket
 from savings.services import create_contribution
 from spend.models import AllowancePlan
 from spend.services import create_allowance_releases
-
+from spend.models import AllowancePlan
 from .models import DepositAllocation
 from .validators import validate_allocation_amounts
 
@@ -340,4 +339,149 @@ def setup_allocation(
         "plan": plan,
         "goal_bucket": goal_bucket,
         "emergency_bucket": emergency_bucket,
+    }
+
+def get_setup_status(scholar):
+    """
+    Return the current financial setup status
+    for a scholar.
+    """
+
+    successful_deposits = (
+        Deposit.objects
+        .filter(
+            scholar=scholar,
+            status=Deposit.Status.SUCCESSFUL,
+        )
+        .select_related("allocation")
+        .order_by(
+            "-confirmed_at",
+            "-created_at",
+        )
+    )
+
+    latest_deposit = successful_deposits.first()
+
+    if latest_deposit is None:
+        return {
+            "setup_complete": False,
+            "has_successful_deposit": False,
+            "has_unallocated_deposit": False,
+            "latest_deposit_id": None,
+            "allocation_id": None,
+            "spend": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "save": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "grow": {
+                "allocated": 0,
+                "configured": False,
+            },
+        }
+
+    try:
+        allocation = (
+            latest_deposit.allocation
+        )
+    except DepositAllocation.DoesNotExist:
+        allocation = None
+
+    if allocation is None:
+        return {
+            "setup_complete": False,
+            "has_successful_deposit": True,
+            "has_unallocated_deposit": True,
+            "latest_deposit_id": str(
+                latest_deposit.id
+            ),
+            "allocation_id": None,
+            "spend": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "save": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "grow": {
+                "allocated": 0,
+                "configured": False,
+            },
+        }
+
+    spend_plan_exists = (
+        AllowancePlan.objects
+        .filter(
+            source_allocation=allocation,
+            status=AllowancePlan.Status.ACTIVE,
+        )
+        .exists()
+    )
+
+    savings_bucket_count = (
+        SavingsBucket.objects
+        .filter(
+            scholar=scholar,
+        )
+        .filter(
+            bucket_type__in=[
+                SavingsBucket.BucketType.GOAL_LOCK,
+                SavingsBucket.BucketType.EMERGENCY,
+            ]
+        )
+        .count()
+    )
+
+    save_configured = (
+        allocation.save_amount == 0
+        or savings_bucket_count > 0
+    )
+
+    setup_complete = (
+        spend_plan_exists
+        and save_configured
+    )
+
+    return {
+        "setup_complete": setup_complete,
+
+        "has_successful_deposit": True,
+
+        "has_unallocated_deposit": False,
+
+        "latest_deposit_id": str(
+            latest_deposit.id
+        ),
+
+        "allocation_id": str(
+            allocation.id
+        ),
+
+        "spend": {
+            "allocated": (
+                allocation.spend_amount
+            ),
+            "configured": spend_plan_exists,
+        },
+
+        "save": {
+            "allocated": (
+                allocation.save_amount
+            ),
+            "configured": save_configured,
+        },
+
+        "grow": {
+            "allocated": (
+                allocation.grow_amount
+            ),
+            # Grow does not require a separate
+            # setup object. Its allocation exists
+            # once DepositAllocation exists.
+            "configured": True,
+        },
     }
