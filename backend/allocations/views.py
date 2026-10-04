@@ -1,15 +1,60 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import DepositAllocation
-from .serializers import DepositAllocationSerializer
+from .serializers import (
+    AllocationSetupResponseSerializer,
+    AllocationSetupSerializer,
+    DepositAllocationSerializer,
+)
 
 
-class AllocationListCreateView(
-    generics.ListCreateAPIView
+class AllocationSetupView(APIView):
+    permission_classes = [
+        IsAuthenticated
+    ]
+
+    def post(self, request):
+        serializer = AllocationSetupSerializer(
+            data=request.data,
+            context={
+                "request": request,
+            },
+        )
+
+        serializer.is_valid(
+            raise_exception=True
+        )
+
+        setup = serializer.save()
+
+        response_serializer = (
+            AllocationSetupResponseSerializer(
+                setup
+            )
+        )
+
+        return Response(
+            {
+                "success": True,
+                "data": response_serializer.data,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class AllocationListView(
+    generics.ListAPIView
 ):
-    serializer_class = DepositAllocationSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = (
+        DepositAllocationSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticated
+    ]
 
     def get_queryset(self):
         return (
@@ -24,8 +69,13 @@ class AllocationListCreateView(
 class AllocationDetailView(
     generics.RetrieveAPIView
 ):
-    serializer_class = DepositAllocationSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = (
+        DepositAllocationSerializer
+    )
+
+    permission_classes = [
+        IsAuthenticated
+    ]
 
     def get_queryset(self):
         return (

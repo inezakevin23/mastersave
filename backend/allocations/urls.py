@@ -2,15 +2,22 @@ from django.urls import path
 
 from .views import (
     AllocationDetailView,
-    AllocationListCreateView,
+    AllocationListView,
+    AllocationSetupView,
 )
 
 
 urlpatterns = [
     path(
         "",
-        AllocationListCreateView.as_view(),
-        name="allocation-list-create",
+        AllocationListView.as_view(),
+        name="allocation-list",
+    ),
+
+    path(
+        "setup/",
+        AllocationSetupView.as_view(),
+        name="allocation-setup",
     ),
 
     path(

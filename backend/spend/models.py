@@ -29,12 +29,10 @@ class AllowancePlan(models.Model):
         related_name="allowance_plans",
     )
 
-    total_amount = models.DecimalField(
-        max_digits=14,
-        decimal_places=0,
-        validators=[
-            MinValueValidator(1),
-        ],
+    source_allocation = models.OneToOneField(
+        "allocations.DepositAllocation",
+        on_delete=models.PROTECT,
+        related_name="spend_plan",
     )
 
     weekly_amount = models.DecimalField(
@@ -83,6 +81,20 @@ class AllowancePlan(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["scholar"],
+                condition=models.Q(
+                    status="ACTIVE"
+                ),
+                name="one_active_allowance_plan_per_scholar",
+            ),
+        ]
+
+    @property
+    def total_amount(self):
+        return self.source_allocation.spend_amount
 
     def __str__(self):
         return (

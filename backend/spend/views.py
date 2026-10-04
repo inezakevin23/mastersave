@@ -12,8 +12,8 @@ from .serializers import (
 from .services import sync_releases
 
 
-class AllowancePlanListCreateView(
-    generics.ListCreateAPIView
+class AllowancePlanListView(
+    generics.ListAPIView
 ):
     serializer_class = AllowancePlanSerializer
     permission_classes = [IsAuthenticated]

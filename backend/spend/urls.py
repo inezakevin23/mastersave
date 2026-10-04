@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     AllowancePlanDetailView,
-    AllowancePlanListCreateView,
+    AllowancePlanListView,
     ExpenseDetailView,
     ExpenseListCreateView,
 )
@@ -11,8 +11,8 @@ from .views import (
 urlpatterns = [
     path(
         "plans/",
-        AllowancePlanListCreateView.as_view(),
-        name="allowance-plan-list-create",
+        AllowancePlanListView.as_view(),
+        name="allowance-plan-list",
     ),
 
     path(

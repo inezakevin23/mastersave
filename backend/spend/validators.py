@@ -4,24 +4,29 @@ from django.core.exceptions import ValidationError
 
 
 def validate_plan_amounts(
-    total_amount,
+    allocation_amount,
     weekly_amount,
     number_of_weeks,
 ):
-    total_amount = Decimal(total_amount)
-    weekly_amount = Decimal(weekly_amount)
+    allocation_amount = Decimal(
+        allocation_amount
+    )
+
+    weekly_amount = Decimal(
+        weekly_amount
+    )
 
     expected_total = (
         weekly_amount * number_of_weeks
     )
 
-    if total_amount != expected_total:
+    if allocation_amount != expected_total:
         raise ValidationError(
             {
-                "total_amount": (
-                    "Total amount must equal "
-                    "weekly amount multiplied by "
-                    "number of weeks."
+                "weekly_amount": (
+                    "Weekly amount multiplied by "
+                    "number of weeks must equal "
+                    "the Spend allocation."
                 )
             }
         )

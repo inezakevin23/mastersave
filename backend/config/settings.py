@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     "spend",
     "dashboard",
     "allocations",
+    "savings",
+    "common",
+    "investments",
 ]
 
 MIDDLEWARE = [
@@ -143,6 +146,9 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "EXCEPTION_HANDLER": (
+        "common.exceptions.mastersave_exception_handler"
+    ),
 }
 
 

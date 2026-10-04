@@ -19,4 +19,12 @@ urlpatterns = [
         "api/allocations/",
         include("allocations.urls"),
     ),
+    path(
+        "api/savings/",
+        include("savings.urls"),
+    ),
+    path(
+        "api/investments/",
+        include("investments.urls"),
+    ),
 ]
