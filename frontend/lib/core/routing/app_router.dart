@@ -5,7 +5,10 @@ import 'package:frontend/feature/dashboard/screens/dashboard_screen.dart';
 import 'package:frontend/feature/auth/providers/auth_provider.dart';
 import 'package:frontend/feature/auth/screens/login_screen.dart';
 import 'package:frontend/feature/auth/screens/register_screen.dart';
+import 'package:frontend/feature/allocations/screens/allocation_setup_screen.dart';
 import 'package:frontend/shared/widgets/splash_screen.dart';
+
+import '../../shared/widgets/startup_gate.dart';
 
 class AppRouter {
   AppRouter._();
@@ -40,7 +43,7 @@ class AppRouter {
         }
 
         if (isAuthenticated && (isAuthRoute || location == '/splash')) {
-          return '/';
+          return '/startup';
         }
 
         return null;
@@ -55,9 +58,9 @@ class AppRouter {
         ),
 
         GoRoute(
-          path: '/',
+          path: '/startup',
           builder: (context, state) {
-            return const DashboardScreen();
+            return const StartupGate();
           },
         ),
 
@@ -72,6 +75,20 @@ class AppRouter {
           path: '/register',
           builder: (context, state) {
             return const RegisterScreen();
+          },
+        ),
+
+        GoRoute(
+          path: '/setup',
+          builder: (context, state) {
+            return const AllocationSetupScreen();
+          },
+        ),
+
+        GoRoute(
+          path: '/',
+          builder: (context, state) {
+            return const DashboardScreen();
           },
         ),
       ],

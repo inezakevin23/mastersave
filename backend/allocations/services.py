@@ -9,11 +9,26 @@ from .models import DepositAllocation
 from .validators import validate_allocation_amounts
 
 
+def get_latest_unallocated_deposit(scholar):
+    return (
+        Deposit.objects
+        .filter(
+            scholar=scholar,
+            status=Deposit.Status.SUCCESSFUL,
+            allocation__isnull=True,
+        )
+        .order_by(
+            "-confirmed_at",
+            "-created_at",
+        )
+        .first()
+    )
+
+
 @transaction.atomic
 def setup_allocation(
     *,
     scholar,
-    deposit,
     spend_amount,
     save_amount,
     grow_amount,
@@ -44,6 +59,20 @@ def setup_allocation(
     If any operation fails, the entire setup is
     rolled back.
     """
+
+    deposit = get_latest_unallocated_deposit(
+        scholar
+    )
+
+    if deposit is None:
+        raise ValidationError(
+            {
+                "deposit": (
+                    "You do not have a successful "
+                    "unallocated deposit available."
+                )
+            }
+        )
 
     # -------------------------------------------------
     # 1. Lock the deposit
@@ -346,27 +375,36 @@ def get_setup_status(scholar):
     for a scholar.
     """
 
-    successful_deposits = (
+    latest_unallocated_deposit = (
+        get_latest_unallocated_deposit(
+            scholar
+        )
+    )
+
+    latest_successful_deposit = (
         Deposit.objects
         .filter(
             scholar=scholar,
             status=Deposit.Status.SUCCESSFUL,
         )
-        .select_related("allocation")
         .order_by(
             "-confirmed_at",
             "-created_at",
         )
+        .first()
     )
 
-    latest_deposit = successful_deposits.first()
-
-    if latest_deposit is None:
+    if latest_unallocated_deposit:
         return {
             "setup_complete": False,
-            "has_successful_deposit": False,
-            "has_unallocated_deposit": False,
-            "latest_deposit_id": None,
+            "has_successful_deposit": True,
+            "has_unallocated_deposit": True,
+            "latest_deposit_id": str(
+                latest_unallocated_deposit.id
+            ),
+            "latest_deposit_amount": (
+                latest_unallocated_deposit.amount
+            ),
             "allocation_id": None,
             "spend": {
                 "allocated": 0,
@@ -382,12 +420,35 @@ def get_setup_status(scholar):
             },
         }
 
-    try:
-        allocation = (
-            latest_deposit.allocation
+    if latest_successful_deposit is None:
+        return {
+            "setup_complete": False,
+            "has_successful_deposit": False,
+            "has_unallocated_deposit": False,
+            "latest_deposit_id": None,
+            "latest_deposit_amount": 0,
+            "allocation_id": None,
+            "spend": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "save": {
+                "allocated": 0,
+                "configured": False,
+            },
+            "grow": {
+                "allocated": 0,
+                "configured": False,
+            },
+        }
+
+    allocation = (
+        DepositAllocation.objects
+        .filter(
+            deposit=latest_successful_deposit
         )
-    except DepositAllocation.DoesNotExist:
-        allocation = None
+        .first()
+    )
 
     if allocation is None:
         return {
@@ -395,7 +456,10 @@ def get_setup_status(scholar):
             "has_successful_deposit": True,
             "has_unallocated_deposit": True,
             "latest_deposit_id": str(
-                latest_deposit.id
+                latest_successful_deposit.id
+            ),
+            "latest_deposit_amount": (
+                latest_successful_deposit.amount
             ),
             "allocation_id": None,
             "spend": {
@@ -440,47 +504,38 @@ def get_setup_status(scholar):
         or savings_bucket_count > 0
     )
 
-    setup_complete = (
-        spend_plan_exists
-        and save_configured
-    )
-
     return {
-        "setup_complete": setup_complete,
-
-        "has_successful_deposit": True,
-
-        "has_unallocated_deposit": False,
-
-        "latest_deposit_id": str(
-            latest_deposit.id
+        "setup_complete": (
+            spend_plan_exists
+            and save_configured
         ),
-
+        "has_successful_deposit": True,
+        "has_unallocated_deposit": False,
+        "latest_deposit_id": str(
+            latest_successful_deposit.id
+        ),
+        "latest_deposit_amount": (
+            latest_successful_deposit.amount
+        ),
         "allocation_id": str(
             allocation.id
         ),
-
         "spend": {
             "allocated": (
                 allocation.spend_amount
             ),
             "configured": spend_plan_exists,
         },
-
         "save": {
             "allocated": (
                 allocation.save_amount
             ),
             "configured": save_configured,
         },
-
         "grow": {
             "allocated": (
                 allocation.grow_amount
             ),
-            # Grow does not require a separate
-            # setup object. Its allocation exists
-            # once DepositAllocation exists.
             "configured": True,
         },
     }

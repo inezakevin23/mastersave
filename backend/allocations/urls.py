@@ -4,6 +4,7 @@ from .views import (
     AllocationDetailView,
     AllocationListView,
     AllocationSetupView,
+    AllocationSetupStatusView,
 )
 
 

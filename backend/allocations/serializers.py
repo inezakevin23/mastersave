@@ -7,8 +7,6 @@ from spend.serializers import (
     AllowancePlanSerializer,
 )
 
-from deposits.models import Deposit
-
 from .models import DepositAllocation
 from .services import setup_allocation
 
@@ -37,10 +35,6 @@ class DepositAllocationSerializer(
 class AllocationSetupSerializer(
     serializers.Serializer
 ):
-    deposit = serializers.PrimaryKeyRelatedField(
-        queryset=Deposit.objects.all()
-    )
-
     spend_amount = serializers.DecimalField(
         max_digits=14,
         decimal_places=0,
@@ -121,19 +115,6 @@ class AllocationSetupSerializer(
     )
 
     def validate(self, attrs):
-        request = self.context["request"]
-        deposit = attrs["deposit"]
-
-        if deposit.scholar_id != request.user.id:
-            raise serializers.ValidationError(
-                {
-                    "deposit": (
-                        "This deposit does "
-                        "not belong to you."
-                    )
-                }
-            )
-
         expected_weekly_total = (
             attrs["weekly_amount"]
             * attrs["number_of_weeks"]
@@ -243,6 +224,14 @@ class AllocationSetupStatusSerializer(
     latest_deposit_id = (
         serializers.CharField(
             allow_null=True
+        )
+    )
+
+    latest_deposit_amount = (
+        serializers.DecimalField(
+            max_digits=14,
+            decimal_places=0,
+            allow_null=True,
         )
     )
 

@@ -5,7 +5,10 @@ from django.test import TestCase
 
 from accounts.models import User
 from allocations.models import DepositAllocation
-from allocations.services import setup_allocation
+from allocations.services import (
+    get_setup_status,
+    setup_allocation,
+)
 from deposits.models import Deposit
 from savings.models import SavingsBucket
 from spend.models import AllowancePlan
@@ -35,8 +38,6 @@ class AllocationSetupTestCase(TestCase):
     def valid_setup(self):
         return {
             "scholar": self.user,
-
-            "deposit": self.deposit,
 
             "spend_amount": Decimal("600000"),
             "save_amount": Decimal("480000"),
@@ -75,6 +76,20 @@ class AllocationSetupTestCase(TestCase):
             **self.valid_setup()
         )
 
+        status = get_setup_status(self.user)
+
+        self.assertEqual(
+            status["latest_deposit_amount"],
+            self.deposit.amount,
+        )
+
+        allocation = DepositAllocation.objects.get()
+
+        self.assertEqual(
+            allocation.deposit,
+            self.deposit,
+        )
+
         self.assertEqual(
             DepositAllocation.objects.count(),
             1,
@@ -95,6 +110,74 @@ class AllocationSetupTestCase(TestCase):
         self.assertEqual(
             SavingsBucket.objects.count(),
             2,
+        )
+
+    def test_setup_uses_latest_unallocated_deposit(self):
+        latest_deposit = Deposit.objects.create(
+            scholar=self.user,
+            amount=Decimal("1200000"),
+            currency="RWF",
+            source=Deposit.Source.ALLOWANCE,
+            status=Deposit.Status.SUCCESSFUL,
+            reference="TEST-DEP-SETUP-LATEST",
+        )
+
+        setup_allocation(
+            **self.valid_setup()
+        )
+
+        allocation = DepositAllocation.objects.get()
+
+        self.assertEqual(
+            allocation.deposit,
+            latest_deposit,
+        )
+
+        status = get_setup_status(self.user)
+
+        self.assertEqual(
+            status["latest_deposit_amount"],
+            latest_deposit.amount,
+        )
+
+    def test_setup_status_reports_unallocated_amount(self):
+        status = get_setup_status(self.user)
+
+        self.assertTrue(
+            status["has_unallocated_deposit"]
+        )
+        self.assertEqual(
+            status["latest_deposit_amount"],
+            self.deposit.amount,
+        )
+
+    def test_setup_status_reports_zero_without_successful_deposit(self):
+        self.deposit.status = Deposit.Status.FAILED
+        self.deposit.save(update_fields=["status"])
+
+        status = get_setup_status(self.user)
+
+        self.assertFalse(
+            status["has_successful_deposit"]
+        )
+        self.assertEqual(
+            status["latest_deposit_amount"],
+            0,
+        )
+
+    def test_setup_requires_successful_unallocated_deposit(self):
+        self.deposit.status = Deposit.Status.FAILED
+        self.deposit.save(update_fields=["status"])
+
+        with self.assertRaises(ValidationError) as context:
+            setup_allocation(**self.valid_setup())
+
+        self.assertEqual(
+            context.exception.message_dict["deposit"],
+            [
+                "You do not have a successful "
+                "unallocated deposit available."
+            ],
         )
 
     def test_save_split_must_equal_save_allocation(self):
@@ -146,7 +229,7 @@ class AllocationSetupTestCase(TestCase):
             **self.valid_setup()
         )
 
-        second_deposit = Deposit.objects.create(
+        Deposit.objects.create(
             scholar=self.user,
             amount=Decimal("1200000"),
             currency="RWF",
@@ -155,14 +238,10 @@ class AllocationSetupTestCase(TestCase):
             reference="TEST-DEP-SETUP-002",
         )
 
-        data = self.valid_setup()
-
-        data["deposit"] = second_deposit
-
         with self.assertRaises(
             ValidationError
         ):
-            setup_allocation(**data)
+            setup_allocation(**self.valid_setup())
 
         self.assertEqual(
             DepositAllocation.objects.count(),

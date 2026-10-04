@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:frontend/feature/allocation_setup/providers/allocation_setup_provider.dart';
+import 'package:frontend/feature/allocations/providers/allocation_provider.dart';
+import 'package:frontend/feature/auth/providers/auth_provider.dart';
 
 class StartupGate extends ConsumerStatefulWidget {
   const StartupGate({super.key});
@@ -16,6 +17,12 @@ class _StartupGateState extends ConsumerState<StartupGate> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authProvider);
+
+    if (authState.status != AuthStatus.authenticated) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     final status = ref.watch(allocationSetupStatusProvider);
 
     status.whenData((data) {
