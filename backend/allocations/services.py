@@ -1,5 +1,5 @@
-from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.core.exceptions import ValidationError  # pyright: ignore[reportMissingModuleSource]
+from django.db import transaction  # pyright: ignore[reportMissingModuleSource]
 
 from deposits.models import Deposit
 from savings.models import SavingsBucket
