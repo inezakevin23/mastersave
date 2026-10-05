@@ -67,7 +67,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
-    profile = ScholarProfileSerializer()
+    profile = ScholarProfileSerializer(write_only=True)
 
     class Meta:
         model = User

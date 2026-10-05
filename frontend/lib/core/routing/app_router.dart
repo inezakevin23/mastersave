@@ -21,9 +21,10 @@ class AppRouter {
         final authState = ref.read(authProvider);
 
         final location = state.matchedLocation;
+        final isAuthRoute = location == '/login' || location == '/register';
 
         if (authState.status == AuthStatus.loading) {
-          if (location == '/splash') {
+          if (location == '/splash' || isAuthRoute) {
             return null;
           }
 
@@ -31,8 +32,6 @@ class AppRouter {
         }
 
         final isAuthenticated = authState.status == AuthStatus.authenticated;
-
-        final isAuthRoute = location == '/login' || location == '/register';
 
         if (!isAuthenticated) {
           if (isAuthRoute) {
