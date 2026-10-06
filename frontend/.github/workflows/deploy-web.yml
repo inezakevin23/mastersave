@@ -19,11 +19,11 @@ jobs:
           channel: stable
 
       - name: Install dependencies
-        working-directory: mobile
+        working-directory: frontend # Changed from 'mobile' to match your repo folder
         run: flutter pub get
 
       - name: Build Flutter Web
-        working-directory: mobile
+        working-directory: frontend # Changed from 'mobile' to match your repo folder
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
@@ -36,4 +36,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: mastersave
-          directory: mobile/build/web
+          directory: frontend/build/web # Changed from 'mobile' to match your repo folder
