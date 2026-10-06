@@ -101,11 +101,20 @@ class InvestmentRequestSerializer(
 class InvestmentTransactionSerializer(
     serializers.ModelSerializer
 ):
+    account_id = serializers.CharField(read_only=True)
+
+    product_name = serializers.CharField(
+        source="account.product.name",
+        read_only=True,
+    )
+
     class Meta:
         model = InvestmentTransaction
 
         fields = [
             "id",
+            "account_id",
+            "product_name",
             "transaction_type",
             "amount",
             "reference",

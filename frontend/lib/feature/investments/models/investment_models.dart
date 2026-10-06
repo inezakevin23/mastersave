@@ -78,3 +78,39 @@ class InvestmentRequestModel {
     );
   }
 }
+
+class InvestmentTransactionModel {
+  final String id;
+  final String productName;
+  final String type;
+  final String description;
+  final String reference;
+  final String status;
+  final int amount;
+  final DateTime? occurredAt;
+
+  const InvestmentTransactionModel({
+    required this.id,
+    required this.productName,
+    required this.type,
+    required this.description,
+    required this.reference,
+    required this.status,
+    required this.amount,
+    required this.occurredAt,
+  });
+
+  factory InvestmentTransactionModel.fromJson(Map<String, dynamic> json) {
+    return InvestmentTransactionModel(
+      id: json['id'].toString(),
+      productName: json['product_name']?.toString() ?? '',
+      type: json['transaction_type']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      reference: json['reference']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      amount: parseMoney(json['amount']),
+      occurredAt: DateTime.tryParse(json['occurred_at']?.toString() ?? '')
+          ?.toLocal(),
+    );
+  }
+}

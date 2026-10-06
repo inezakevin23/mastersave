@@ -110,7 +110,7 @@ def create_investment_request(
         locked_allocation.deposit.scholar_id
         != scholar.id
     ):
-        raise ValueError(
+        raise ValidationError(
             "This allocation does not belong to you."
         )
 
@@ -118,12 +118,12 @@ def create_investment_request(
         locked_allocation.status
         != DepositAllocation.Status.CONFIRMED
     ):
-        raise ValueError(
+        raise ValidationError(
             "This allocation is not available."
         )
 
     if product.status != product.Status.ACTIVE:
-        raise ValueError(
+        raise ValidationError(
             "This investment product is not active."
         )
 

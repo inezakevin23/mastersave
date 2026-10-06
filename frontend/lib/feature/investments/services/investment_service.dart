@@ -38,6 +38,22 @@ class InvestmentService {
     }
   }
 
+  static Future<List<InvestmentTransactionModel>> getTransactions() async {
+    try {
+      final response = await ApiClient.dio.get('/investments/transactions/');
+      final rows = _asList(response.data);
+      return rows
+          .map(
+            (row) => InvestmentTransactionModel.fromJson(
+              Map<String, dynamic>.from(row as Map),
+            ),
+          )
+          .toList();
+    } on DioException catch (error) {
+      throw InvestmentServiceException(_message(error));
+    }
+  }
+
   static Future<void> submitRequest({
     required String allocationId,
     required String productId,

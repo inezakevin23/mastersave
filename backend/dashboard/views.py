@@ -275,6 +275,9 @@ class DashboardView(APIView):
                                 "projected_return"
                             ]
                         ),
+                        "allocations": grow_summary[
+                            "allocations"
+                        ],
                         "accounts": grow_summary[
                             "accounts"
                         ],

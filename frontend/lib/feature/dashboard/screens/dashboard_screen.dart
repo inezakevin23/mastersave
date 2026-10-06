@@ -30,8 +30,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     WidgetsBinding.instance.addObserver(this);
     _refreshTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       if (mounted &&
-          WidgetsBinding.instance.lifecycleState ==
-              AppLifecycleState.resumed) {
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         ref.read(dashboardProvider.notifier).refreshDashboard();
       }
     });
@@ -548,33 +547,39 @@ class _SpendSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Next release',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Next release',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: 5),
-
-                  Text(
-                    _releaseText(nextRelease?.scheduledAt),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF536070),
+                    const SizedBox(height: 5),
+                    Text(
+                      _releaseText(nextRelease?.scheduledAt),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF536070),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-
-              _MoneyLine(
-                currency: data.currency,
-                amount: nextRelease?.amount ?? weeklyAmount,
-                amountSize: 20,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: _MoneyLine(
+                    currency: data.currency,
+                    amount: nextRelease?.amount ?? weeklyAmount,
+                    amountSize: 20,
+                  ),
+                ),
               ),
             ],
           ),
@@ -688,10 +693,17 @@ class _SavingsBucketCard extends StatelessWidget {
                 ),
               ),
 
-              _MoneyLine(
-                currency: currency,
-                amount: bucket.balance,
-                amountSize: 18,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: _MoneyLine(
+                    currency: currency,
+                    amount: bucket.balance,
+                    amountSize: 18,
+                  ),
+                ),
               ),
             ],
           ),
@@ -802,27 +814,36 @@ class _GrowSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Investment Balance',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-
-                  SizedBox(height: 5),
-
-                  Text(
-                    'Held with a licensed partner',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF536070)),
-                  ),
-                ],
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Investment Balance',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'Held with a licensed partner',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF536070)),
+                    ),
+                  ],
+                ),
               ),
-
-              _MoneyLine(
-                currency: data.currency,
-                amount: data.grow.investmentBalance,
-                amountSize: 18,
+              const SizedBox(width: 8),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: _MoneyLine(
+                    currency: data.currency,
+                    amount: data.grow.investmentBalance,
+                    amountSize: 18,
+                  ),
+                ),
               ),
             ],
           ),
@@ -864,37 +885,42 @@ class _GrowSection extends StatelessWidget {
           ),
         ),
 
-        if (data.grow.available > 0) ...[
+        if (data.grow.allocated > 0) ...[
           const SizedBox(height: 14),
 
           _DashboardCard(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const Text(
+                  'Grow allocation',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 14),
+                Row(
                   children: [
-                    Text(
-                      'Available to invest',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    _GrowAmountMetric(
+                      label: 'Available',
+                      amount: data.grow.available,
+                      currency: data.currency,
                     ),
-
-                    SizedBox(height: 5),
-
-                    Text(
-                      'Part of your Grow allocation not yet invested',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF536070)),
+                    _GrowAmountMetric(
+                      label: 'Reserved',
+                      amount: data.grow.reserved,
+                      currency: data.currency,
+                    ),
+                    _GrowAmountMetric(
+                      label: 'Invested',
+                      amount: data.grow.invested,
+                      currency: data.currency,
                     ),
                   ],
                 ),
-
-                _MoneyLine(
-                  currency: data.currency,
-                  amount: data.grow.available,
-                  amountSize: 18,
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => context.go('/grow'),
+                  icon: const Icon(Icons.trending_up),
+                  label: const Text('Explore investment products'),
                 ),
               ],
             ),
@@ -908,6 +934,40 @@ class _GrowSection extends StatelessWidget {
 // --------------------------------------------------
 // Shared widgets
 // --------------------------------------------------
+
+class _GrowAmountMetric extends StatelessWidget {
+  final String label;
+  final int amount;
+  final String currency;
+
+  const _GrowAmountMetric({
+    required this.label,
+    required this.amount,
+    required this.currency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, color: Color(0xFF697586)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$currency ${formatMoney(amount)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _DashboardCard extends StatelessWidget {
   final Widget child;

@@ -163,7 +163,7 @@ class InvestmentTransactionListView(
             .filter(
                 account__scholar=self.request.user
             )
-            .select_related("account")
+            .select_related("account", "account__product")
         )
 
 class GrowSummaryView(APIView):

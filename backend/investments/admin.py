@@ -65,6 +65,7 @@ class InvestmentRequestAdmin(admin.ModelAdmin):
 
     readonly_fields = [
         "reference",
+        "status",
         "requested_at",
         "completed_at",
         "created_at",
