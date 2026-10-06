@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:frontend/feature/allocations/providers/allocation_provider.dart';
-import 'package:frontend/feature/auth/providers/auth_provider.dart';
 
 class StartupGate extends ConsumerStatefulWidget {
   const StartupGate({super.key});
@@ -17,12 +16,6 @@ class _StartupGateState extends ConsumerState<StartupGate> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-
-    if (authState.status != AuthStatus.authenticated) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     final status = ref.watch(allocationSetupStatusProvider);
 
     status.whenData((data) {
@@ -39,9 +32,17 @@ class _StartupGateState extends ConsumerState<StartupGate> {
 
         if (data.setupComplete) {
           context.go('/');
-        } else {
-          context.go('/setup');
+          return;
         }
+
+        if (data.hasUnallocatedDeposit) {
+          context.go('/setup');
+          return;
+        }
+
+        // Scholar is authenticated but
+        // hasn't received an allowance yet.
+        context.go('/waiting');
       });
     });
 

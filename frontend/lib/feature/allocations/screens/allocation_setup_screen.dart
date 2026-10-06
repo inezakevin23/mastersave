@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:frontend/feature/dashboard/providers/dashboard_provider.dart';
 
 import '../models/allocation_setup_status.dart';
 import '../providers/allocation_provider.dart';
@@ -281,6 +282,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
       );
 
       ref.invalidate(allocationSetupStatusProvider);
+      ref.invalidate(dashboardProvider);
 
       if (mounted) {
         context.go('/');

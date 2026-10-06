@@ -55,16 +55,3 @@ def create_allowance_releases(plan):
     return releases
 
 
-@transaction.atomic
-def sync_releases(plan):
-    now = timezone.now()
-
-    releases = plan.releases.filter(
-        status=AllowanceRelease.Status.SCHEDULED,
-        scheduled_at__lte=now,
-    )
-
-    releases.update(
-        status=AllowanceRelease.Status.RELEASED,
-        released_at=now,
-    )

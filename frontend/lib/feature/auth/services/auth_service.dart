@@ -99,20 +99,9 @@ class AuthService {
   }
 
   static String _convertError(DioException error) {
-    if (error.response?.data is Map<String, dynamic>) {
-      final data = Map<String, dynamic>.from(error.response!.data);
-
-      if (data['detail'] != null) {
-        return data['detail'].toString();
-      }
-
-      if (data['password'] != null) {
-        return data['password'].toString();
-      }
-
-      if (data['email'] != null) {
-        return data['email'].toString();
-      }
+    final responseMessage = _extractErrorMessage(error.response?.data);
+    if (responseMessage != null && responseMessage.isNotEmpty) {
+      return responseMessage;
     }
 
     if (error.type == DioExceptionType.connectionTimeout) {
@@ -124,5 +113,51 @@ class AuthService {
     }
 
     return 'Something went wrong. Please try again.';
+  }
+
+  static String? _extractErrorMessage(dynamic value) {
+    if (value is String) {
+      return value;
+    }
+
+    if (value is List) {
+      for (final item in value) {
+        final message = _extractErrorMessage(item);
+        if (message != null && message.isNotEmpty) {
+          return message;
+        }
+      }
+      return null;
+    }
+
+    if (value is Map) {
+      for (final key in [
+        'detail',
+        'error',
+        'email',
+        'password',
+        'password_confirmation',
+        'profile',
+      ]) {
+        if (value.containsKey(key)) {
+          final message = _extractErrorMessage(value[key]);
+          if (message != null && message.isNotEmpty) {
+            return message;
+          }
+        }
+      }
+
+      for (final entry in value.entries) {
+        if (entry.key == 'success') {
+          continue;
+        }
+        final message = _extractErrorMessage(entry.value);
+        if (message != null && message.isNotEmpty) {
+          return '${entry.key}: $message';
+        }
+      }
+    }
+
+    return null;
   }
 }

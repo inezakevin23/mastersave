@@ -74,42 +74,107 @@ class DashboardData {
   }
 }
 
+class AllowanceReleaseSummary {
+  final String id;
+  final int amount;
+  final String? status;
+  final DateTime? releasedAt;
+  final DateTime? scheduledAt;
+
+  const AllowanceReleaseSummary({
+    required this.id,
+    required this.amount,
+    required this.status,
+    required this.releasedAt,
+    required this.scheduledAt,
+  });
+
+  factory AllowanceReleaseSummary.fromJson(Map<String, dynamic> json) {
+    return AllowanceReleaseSummary(
+      id: json['id']?.toString() ?? '',
+      amount: parseMoney(json['amount']),
+      status: json['status']?.toString(),
+      releasedAt: json['released_at'] == null
+          ? null
+          : DateTime.tryParse(json['released_at'].toString())?.toLocal(),
+      scheduledAt: json['scheduled_at'] == null
+          ? null
+          : DateTime.tryParse(json['scheduled_at'].toString())?.toLocal(),
+    );
+  }
+}
+
 class SpendSummary {
   final int allocated;
   final int? currentWeek;
   final int? totalWeeks;
-  final int? weeklyBudget;
-  final int usedThisWeek;
-  final int? remainingThisWeek;
-  final DateTime? nextRelease;
+  final int? weeklyAmount;
+  final AllowanceReleaseSummary? currentRelease;
+  final AllowanceReleaseSummary? nextRelease;
+  final DueAllowanceReleaseSummary? withdrawalRelease;
 
   const SpendSummary({
     required this.allocated,
     required this.currentWeek,
     required this.totalWeeks,
-    required this.weeklyBudget,
-    required this.usedThisWeek,
-    required this.remainingThisWeek,
+    required this.weeklyAmount,
+    required this.currentRelease,
     required this.nextRelease,
+    required this.withdrawalRelease,
   });
 
   factory SpendSummary.fromJson(Map<String, dynamic> json) {
+    final rawCurrentRelease = json['current_release'];
     final rawNextRelease = json['next_release'];
+    final rawWithdrawalRelease = json['withdrawal_release'];
 
     return SpendSummary(
       allocated: parseMoney(json['allocated']),
       currentWeek: json['current_week'] as int?,
       totalWeeks: json['total_weeks'] as int?,
-      weeklyBudget: json['weekly_budget'] == null
+      weeklyAmount: json['weekly_amount'] == null
           ? null
-          : parseMoney(json['weekly_budget']),
-      usedThisWeek: parseMoney(json['used_this_week']),
-      remainingThisWeek: json['remaining_this_week'] == null
+          : parseMoney(json['weekly_amount']),
+      currentRelease: rawCurrentRelease is Map
+          ? AllowanceReleaseSummary.fromJson(
+              Map<String, dynamic>.from(rawCurrentRelease),
+            )
+          : null,
+      nextRelease: rawNextRelease is Map
+          ? AllowanceReleaseSummary.fromJson(
+              Map<String, dynamic>.from(rawNextRelease),
+            )
+          : null,
+      withdrawalRelease: rawWithdrawalRelease is Map
+          ? DueAllowanceReleaseSummary.fromJson(
+              Map<String, dynamic>.from(rawWithdrawalRelease),
+            )
+          : null,
+    );
+  }
+}
+
+class DueAllowanceReleaseSummary {
+  final String id;
+  final int weekNumber;
+  final int amount;
+  final DateTime? scheduledAt;
+
+  const DueAllowanceReleaseSummary({
+    required this.id,
+    required this.weekNumber,
+    required this.amount,
+    required this.scheduledAt,
+  });
+
+  factory DueAllowanceReleaseSummary.fromJson(Map<String, dynamic> json) {
+    return DueAllowanceReleaseSummary(
+      id: json['id']?.toString() ?? '',
+      weekNumber: parseMoney(json['week_number']),
+      amount: parseMoney(json['amount']),
+      scheduledAt: json['scheduled_at'] == null
           ? null
-          : parseMoney(json['remaining_this_week']),
-      nextRelease: rawNextRelease == null
-          ? null
-          : DateTime.tryParse(rawNextRelease.toString())?.toLocal(),
+          : DateTime.tryParse(json['scheduled_at'].toString())?.toLocal(),
     );
   }
 }

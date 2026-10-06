@@ -3,8 +3,8 @@ from django.urls import path
 from .views import (
     AllowancePlanDetailView,
     AllowancePlanListView,
-    ExpenseDetailView,
-    ExpenseListCreateView,
+    AllowanceReleaseDetailView,
+    AllowanceReleaseListView,
 )
 
 
@@ -22,14 +22,15 @@ urlpatterns = [
     ),
 
     path(
-        "expenses/",
-        ExpenseListCreateView.as_view(),
-        name="expense-list-create",
+        "releases/",
+        AllowanceReleaseListView.as_view(),
+        name="allowance-release-list",
     ),
 
     path(
-        "expenses/<uuid:pk>/",
-        ExpenseDetailView.as_view(),
-        name="expense-detail",
+        "releases/<uuid:pk>/",
+        AllowanceReleaseDetailView.as_view(),
+        name="allowance-release-detail",
     ),
+
 ]

@@ -9,12 +9,111 @@ from rest_framework.views import APIView
 
 from allocations.models import DepositAllocation
 from deposits.models import Deposit
-from spend.models import AllowancePlan
+from spend.models import AllowancePlan, AllowanceRelease
 from savings.models import (
     SavingsBucket,
     SavingsTransaction,
 )
 from investments.summary import get_grow_summary
+
+
+def get_spend_summary(scholar):
+    plan = (
+        AllowancePlan.objects
+        .filter(
+            scholar=scholar,
+            status=AllowancePlan.Status.ACTIVE,
+        )
+        .prefetch_related("releases")
+        .first()
+    )
+
+    if plan is None:
+        return {
+            "allocated": 0,
+            "current_week": None,
+            "total_weeks": None,
+            "weekly_amount": None,
+            "current_release": None,
+            "next_release": None,
+            "withdrawal_release": None,
+        }
+
+    now = timezone.now()
+
+    current_release = (
+        plan.releases
+        .filter(
+            scheduled_at__lte=now,
+            status__in=[
+                AllowanceRelease.Status.PROCESSING,
+                AllowanceRelease.Status.RELEASED,
+                AllowanceRelease.Status.FAILED,
+            ],
+        )
+        .order_by("-week_number")
+        .first()
+    )
+
+    next_release = (
+        plan.releases
+        .filter(
+            scheduled_at__gt=now,
+            status=AllowanceRelease.Status.SCHEDULED,
+        )
+        .order_by("scheduled_at")
+        .first()
+    )
+
+    withdrawal_release = (
+        plan.releases
+        .filter(
+            scheduled_at__lte=now,
+            status=AllowanceRelease.Status.SCHEDULED,
+        )
+        .order_by("scheduled_at")
+        .first()
+    )
+
+    return {
+        "allocated": plan.total_amount,
+        "current_week": (
+            current_release.week_number
+            if current_release
+            else None
+        ),
+        "total_weeks": plan.number_of_weeks,
+        "weekly_amount": plan.weekly_amount,
+        "current_release": (
+            {
+                "id": str(current_release.id),
+                "amount": current_release.amount,
+                "status": current_release.status,
+                "released_at": current_release.released_at,
+            }
+            if current_release
+            else None
+        ),
+        "next_release": (
+            {
+                "id": str(next_release.id),
+                "amount": next_release.amount,
+                "scheduled_at": next_release.scheduled_at,
+            }
+            if next_release
+            else None
+        ),
+        "withdrawal_release": (
+            {
+                "id": str(withdrawal_release.id),
+                "week_number": withdrawal_release.week_number,
+                "amount": withdrawal_release.amount,
+                "scheduled_at": withdrawal_release.scheduled_at,
+            }
+            if withdrawal_release
+            else None
+        ),
+    }
 
 
 class DashboardView(APIView):
@@ -122,92 +221,7 @@ class DashboardView(APIView):
             scholar
         )
 
-        spend_data = {
-            "allocated": spend_allocated,
-            "current_week": None,
-            "total_weeks": None,
-            "weekly_budget": None,
-            "used_this_week": Decimal("0"),
-            "remaining_this_week": None,
-            "next_release": None,
-        }
-
-        plan = (
-            AllowancePlan.objects
-            .filter(
-                scholar=scholar,
-                status=AllowancePlan.Status.ACTIVE,
-            )
-            .first()
-        )
-
-        if plan:
-            now = timezone.now()
-
-            # Release all weeks whose release time
-            # has already passed.
-            from spend.services import sync_releases
-
-            sync_releases(plan)
-
-            current_release = (
-                plan.releases
-                .filter(
-                    status="RELEASED",
-                    scheduled_at__lte=now,
-                )
-                .order_by("-week_number")
-                .first()
-            )
-
-            next_release = (
-                plan.releases
-                .filter(
-                    status="SCHEDULED",
-                    scheduled_at__gt=now,
-                )
-                .order_by("scheduled_at")
-                .first()
-            )
-
-            if current_release:
-                used_this_week = (
-                    current_release.expenses
-                    .aggregate(
-                        total=Sum("amount")
-                    )["total"]
-                    or Decimal("0")
-                )
-
-                remaining_this_week = max(
-                    Decimal("0"),
-                    current_release.amount
-                    - used_this_week,
-                )
-
-                spend_data = {
-                    "allocated": spend_allocated,
-                    "current_week": (
-                        current_release.week_number
-                    ),
-                    "total_weeks": (
-                        plan.number_of_weeks
-                    ),
-                    "weekly_budget": (
-                        current_release.amount
-                    ),
-                    "used_this_week": (
-                        used_this_week
-                    ),
-                    "remaining_this_week": (
-                        remaining_this_week
-                    ),
-                    "next_release": (
-                        next_release.scheduled_at
-                        if next_release
-                        else None
-                    ),
-                }
+        spend_data = get_spend_summary(scholar)
 
         return Response(
             {

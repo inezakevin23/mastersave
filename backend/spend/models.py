@@ -108,7 +108,9 @@ class AllowanceRelease(models.Model):
 
     class Status(models.TextChoices):
         SCHEDULED = "SCHEDULED", "Scheduled"
+        PROCESSING = "PROCESSING", "Processing"
         RELEASED = "RELEASED", "Released"
+        FAILED = "FAILED", "Failed"
         CANCELLED = "CANCELLED", "Cancelled"
 
     id = models.UUIDField(
@@ -146,8 +148,26 @@ class AllowanceRelease(models.Model):
         default=Status.SCHEDULED,
     )
 
+    provider = models.CharField(
+        max_length=50,
+        blank=True,
+    )
+
+    provider_reference = models.CharField(
+        max_length=255,
+        blank=True,
+    )
+
+    failure_reason = models.TextField(
+        blank=True,
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
     )
 
     class Meta:
@@ -167,68 +187,3 @@ class AllowanceRelease(models.Model):
         )
 
 
-class Expense(models.Model):
-
-    class Category(models.TextChoices):
-        ACCOMMODATION = "ACCOMMODATION", "Accommodation"
-        FOOD = "FOOD", "Food"
-        TRANSPORT = "TRANSPORT", "Transport"
-        EDUCATION = "EDUCATION", "Education"
-        COMMUNICATION = "COMMUNICATION", "Communication"
-        PERSONAL = "PERSONAL", "Personal"
-        OTHER = "OTHER", "Other"
-
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-    )
-
-    scholar = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name="expenses",
-    )
-
-    allowance_release = models.ForeignKey(
-        AllowanceRelease,
-        on_delete=models.PROTECT,
-        related_name="expenses",
-    )
-
-    category = models.CharField(
-        max_length=30,
-        choices=Category.choices,
-    )
-
-    amount = models.DecimalField(
-        max_digits=14,
-        decimal_places=0,
-        validators=[
-            MinValueValidator(1),
-        ],
-    )
-
-    description = models.CharField(
-        max_length=255,
-        blank=True,
-    )
-
-    spent_at = models.DateTimeField()
-
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-    )
-
-    class Meta:
-        ordering = ["-spent_at"]
-
-    def __str__(self):
-        return (
-            f"{self.category} - "
-            f"{self.amount} RWF"
-        )

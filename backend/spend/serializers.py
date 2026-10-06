@@ -1,6 +1,3 @@
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-from django.db.models import Sum
 from rest_framework import serializers
 
 from allocations.models import DepositAllocation
@@ -8,13 +5,9 @@ from allocations.models import DepositAllocation
 from .models import (
     AllowancePlan,
     AllowanceRelease,
-    Expense,
 )
 from .services import create_allowance_releases
-from .validators import (
-    validate_expense_does_not_exceed_budget,
-    validate_plan_amounts,
-)
+from .validators import validate_plan_amounts
 
 
 class AllowanceReleaseSerializer(
@@ -30,6 +23,9 @@ class AllowanceReleaseSerializer(
             "scheduled_at",
             "released_at",
             "status",
+            "provider",
+            "provider_reference",
+            "failure_reason",
         ]
 
         read_only_fields = fields
@@ -140,74 +136,3 @@ class AllowancePlanSerializer(
         return plan
 
 
-class ExpenseSerializer(
-    serializers.ModelSerializer
-):
-    class Meta:
-        model = Expense
-
-        fields = [
-            "id",
-            "allowance_release",
-            "category",
-            "amount",
-            "description",
-            "spent_at",
-            "created_at",
-        ]
-
-        read_only_fields = [
-            "id",
-            "created_at",
-        ]
-
-    def validate(self, attrs):
-        request = self.context["request"]
-        scholar = request.user
-
-        release = attrs["allowance_release"]
-
-        if release.plan.scholar_id != scholar.id:
-            raise serializers.ValidationError(
-                {
-                    "allowance_release": (
-                        "This allowance release "
-                        "does not belong to you."
-                    )
-                }
-            )
-
-        if release.status != (
-            release.Status.RELEASED
-        ):
-            raise serializers.ValidationError(
-                {
-                    "allowance_release": (
-                        "This allowance release "
-                        "is not currently available."
-                    )
-                }
-            )
-
-        already_spent = (
-            release.expenses.aggregate(
-                total=Sum("amount")
-            )["total"]
-            or 0
-        )
-
-        validate_expense_does_not_exceed_budget(
-            expense_amount=attrs["amount"],
-            already_spent=already_spent,
-            weekly_budget=release.amount,
-        )
-
-        return attrs
-
-    def create(self, validated_data):
-        return Expense.objects.create(
-            scholar=self.context[
-                "request"
-            ].user,
-            **validated_data,
-        )

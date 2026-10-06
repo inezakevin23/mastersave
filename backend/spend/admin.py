@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import (
     AllowancePlan,
     AllowanceRelease,
-    Expense,
 )
 
 
@@ -67,21 +66,3 @@ class AllowanceReleaseAdmin(admin.ModelAdmin):
     ]
 
 
-@admin.register(Expense)
-class ExpenseAdmin(admin.ModelAdmin):
-    list_display = [
-        "scholar",
-        "category",
-        "amount",
-        "allowance_release",
-        "spent_at",
-    ]
-
-    list_filter = [
-        "category",
-    ]
-
-    search_fields = [
-        "scholar__email",
-        "description",
-    ]

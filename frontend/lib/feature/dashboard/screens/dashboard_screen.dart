@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../auth/models/auth_models.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -57,6 +58,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 const SizedBox(height: 18),
 
                 _AllocationBar(data: data),
+
+                const SizedBox(height: 12),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      context.go('/allocation');
+                    },
+                    icon: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 18,
+                    ),
+                    label: const Text('View allocation'),
+                  ),
+                ),
 
                 const SizedBox(height: 18),
 
@@ -443,14 +460,16 @@ class _SpendSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final spend = data.spend;
-
-    final weeklyBudget = spend.weeklyBudget ?? 0;
-
-    final used = spend.usedThisWeek;
-
-    final progress = weeklyBudget == 0
-        ? 0.0
-        : (used / weeklyBudget).clamp(0.0, 1.0);
+    final currentRelease = spend.currentRelease;
+    final nextRelease = spend.nextRelease;
+    final weeklyAmount = spend.weeklyAmount ?? 0;
+    final releaseStatus = currentRelease?.status;
+    final statusColor = switch (releaseStatus) {
+      'RELEASED' => const Color(0xFF059669),
+      'PROCESSING' => const Color(0xFFF59E0B),
+      'FAILED' => const Color(0xFFDC2626),
+      _ => const Color(0xFF697586),
+    };
 
     return Column(
       children: [
@@ -458,35 +477,35 @@ class _SpendSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _CardLabel(text: "THIS WEEK'S ALLOWANCE"),
+              const _CardLabel(text: 'WEEKLY SPEND ALLOCATION'),
 
               const SizedBox(height: 12),
 
               _MoneyLine(
                 currency: data.currency,
-                amount: weeklyBudget,
+                amount: weeklyAmount,
                 amountSize: 35,
               ),
 
               const SizedBox(height: 12),
 
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  backgroundColor: const Color(0xFFE5E7EB),
-                  color: const Color(0xFFDC2626),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Text(
-                '${data.currency} '
-                '${formatMoney(spend.remainingThisWeek ?? 0)} '
-                'left this week',
-                style: const TextStyle(fontSize: 13, color: Color(0xFF536070)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    currentRelease == null
+                        ? 'No current release'
+                        : 'Week ${spend.currentWeek} of ${spend.totalWeeks}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF536070),
+                    ),
+                  ),
+                  _StatusBadge(
+                    label: releaseStatus ?? 'SCHEDULED',
+                    color: statusColor,
+                  ),
+                ],
               ),
             ],
           ),
@@ -502,10 +521,7 @@ class _SpendSection extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    spend.currentWeek != null && spend.totalWeeks != null
-                        ? 'Week ${spend.currentWeek} '
-                              'of ${spend.totalWeeks}'
-                        : 'Current week',
+                    'Next release',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
@@ -514,36 +530,8 @@ class _SpendSection extends StatelessWidget {
 
                   const SizedBox(height: 5),
 
-                  const Text(
-                    'Used so far this week',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF536070)),
-                  ),
-                ],
-              ),
-
-              _MoneyLine(currency: data.currency, amount: used, amountSize: 20),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        _DashboardCard(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Weekly Budget',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                  ),
-
-                  const SizedBox(height: 5),
-
                   Text(
-                    _releaseText(spend.nextRelease),
+                    _releaseText(nextRelease?.scheduledAt),
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF536070),
@@ -554,7 +542,7 @@ class _SpendSection extends StatelessWidget {
 
               _MoneyLine(
                 currency: data.currency,
-                amount: weeklyBudget,
+                amount: nextRelease?.amount ?? weeklyAmount,
                 amountSize: 20,
               ),
             ],
@@ -566,14 +554,14 @@ class _SpendSection extends StatelessWidget {
 
   String _releaseText(DateTime? date) {
     if (date == null) {
-      return 'Release schedule unavailable';
+      return 'No upcoming release scheduled';
     }
 
     final day = DateFormat('EEEE').format(date);
 
     final time = DateFormat('h:mm a').format(date);
 
-    return 'Released every $day at $time';
+    return 'Scheduled $day at $time';
   }
 }
 

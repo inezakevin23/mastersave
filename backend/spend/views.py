@@ -1,15 +1,11 @@
-from django.db.models import Sum
-from django.shortcuts import get_object_or_404
-
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
-from .models import AllowancePlan, Expense
+from .models import AllowancePlan, AllowanceRelease
 from .serializers import (
     AllowancePlanSerializer,
-    ExpenseSerializer,
+    AllowanceReleaseSerializer,
 )
-from .services import sync_releases
 
 
 class AllowancePlanListView(
@@ -39,44 +35,36 @@ class AllowancePlanDetailView(
             .prefetch_related("releases")
         )
 
-    def retrieve(self, request, *args, **kwargs):
-        instance = self.get_object()
-
-        sync_releases(instance)
-
-        instance.refresh_from_db()
-
-        return super().retrieve(
-            request,
-            *args,
-            **kwargs,
-        )
-
-
-class ExpenseListCreateView(
-    generics.ListCreateAPIView
+class AllowanceReleaseListView(
+    generics.ListAPIView
 ):
-    serializer_class = ExpenseSerializer
+    serializer_class = AllowanceReleaseSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return (
-            Expense.objects
-            .filter(scholar=self.request.user)
-            .select_related(
-                "allowance_release",
-                "allowance_release__plan",
+            AllowanceRelease.objects
+            .filter(
+                plan__scholar=self.request.user
             )
+            .select_related("plan")
+            .order_by("week_number")
         )
 
 
-class ExpenseDetailView(
-    generics.RetrieveUpdateDestroyAPIView
+class AllowanceReleaseDetailView(
+    generics.RetrieveAPIView
 ):
-    serializer_class = ExpenseSerializer
+    serializer_class = AllowanceReleaseSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Expense.objects.filter(
-            scholar=self.request.user
+        return (
+            AllowanceRelease.objects
+            .filter(
+                plan__scholar=self.request.user
+            )
+            .select_related("plan")
         )
+
+

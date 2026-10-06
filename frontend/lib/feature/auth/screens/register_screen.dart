@@ -152,12 +152,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 controller: _passwordController,
                 label: 'Password',
                 obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Password is required.';
+                  }
+                  if (value.length < 8) {
+                    return 'Password must be at least 8 characters.';
+                  }
+                  return null;
+                },
               ),
 
               _field(
                 controller: _confirmPasswordController,
                 label: 'Confirm password',
                 obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Confirm password is required.';
+                  }
+                  if (value != _passwordController.text) {
+                    return 'Passwords do not match.';
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 12),
@@ -201,6 +219,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     required String label,
     TextInputType? keyboardType,
     bool obscureText = false,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -209,13 +228,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         keyboardType: keyboardType,
         obscureText: obscureText,
         decoration: InputDecoration(labelText: label),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return '$label is required.';
-          }
-
-          return null;
-        },
+        validator:
+            validator ??
+            (value) => value == null || value.trim().isEmpty
+                ? '$label is required.'
+                : null,
       ),
     );
   }
