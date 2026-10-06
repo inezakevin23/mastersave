@@ -224,7 +224,7 @@ class AllocationSetupTestCase(TestCase):
             0,
         )
 
-    def test_only_one_active_plan(self):
+    def test_each_deposit_can_have_its_own_active_plan(self):
         setup_allocation(
             **self.valid_setup()
         )
@@ -238,12 +238,15 @@ class AllocationSetupTestCase(TestCase):
             reference="TEST-DEP-SETUP-002",
         )
 
-        with self.assertRaises(
-            ValidationError
-        ):
-            setup_allocation(**self.valid_setup())
+        setup_allocation(**self.valid_setup())
 
         self.assertEqual(
             DepositAllocation.objects.count(),
-            1,
+            2,
+        )
+        self.assertEqual(
+            AllowancePlan.objects.filter(
+                status=AllowancePlan.Status.ACTIVE
+            ).count(),
+            2,
         )

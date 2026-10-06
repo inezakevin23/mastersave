@@ -76,6 +76,8 @@ class DashboardData {
 
 class AllowanceReleaseSummary {
   final String id;
+  final String? planId;
+  final int weekNumber;
   final int amount;
   final String? status;
   final DateTime? releasedAt;
@@ -83,6 +85,8 @@ class AllowanceReleaseSummary {
 
   const AllowanceReleaseSummary({
     required this.id,
+    required this.planId,
+    required this.weekNumber,
     required this.amount,
     required this.status,
     required this.releasedAt,
@@ -92,6 +96,8 @@ class AllowanceReleaseSummary {
   factory AllowanceReleaseSummary.fromJson(Map<String, dynamic> json) {
     return AllowanceReleaseSummary(
       id: json['id']?.toString() ?? '',
+      planId: json['plan_id']?.toString(),
+      weekNumber: parseMoney(json['week_number']),
       amount: parseMoney(json['amount']),
       status: json['status']?.toString(),
       releasedAt: json['released_at'] == null
@@ -106,30 +112,43 @@ class AllowanceReleaseSummary {
 
 class SpendSummary {
   final int allocated;
+  final List<AllowancePlanSummary> plans;
   final int? currentWeek;
   final int? totalWeeks;
   final int? weeklyAmount;
   final AllowanceReleaseSummary? currentRelease;
   final AllowanceReleaseSummary? nextRelease;
   final DueAllowanceReleaseSummary? withdrawalRelease;
+  final List<DueAllowanceReleaseSummary> withdrawalReleases;
 
   const SpendSummary({
     required this.allocated,
+    required this.plans,
     required this.currentWeek,
     required this.totalWeeks,
     required this.weeklyAmount,
     required this.currentRelease,
     required this.nextRelease,
     required this.withdrawalRelease,
+    required this.withdrawalReleases,
   });
 
   factory SpendSummary.fromJson(Map<String, dynamic> json) {
     final rawCurrentRelease = json['current_release'];
     final rawNextRelease = json['next_release'];
     final rawWithdrawalRelease = json['withdrawal_release'];
+    final rawPlans = json['plans'] as List? ?? [];
+    final rawWithdrawalReleases = json['withdrawal_releases'] as List? ?? [];
 
     return SpendSummary(
       allocated: parseMoney(json['allocated']),
+      plans: rawPlans
+          .map(
+            (plan) => AllowancePlanSummary.fromJson(
+              Map<String, dynamic>.from(plan as Map),
+            ),
+          )
+          .toList(),
       currentWeek: json['current_week'] as int?,
       totalWeeks: json['total_weeks'] as int?,
       weeklyAmount: json['weekly_amount'] == null
@@ -150,18 +169,57 @@ class SpendSummary {
               Map<String, dynamic>.from(rawWithdrawalRelease),
             )
           : null,
+      withdrawalReleases: rawWithdrawalReleases
+          .map(
+            (release) => DueAllowanceReleaseSummary.fromJson(
+              Map<String, dynamic>.from(release as Map),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class AllowancePlanSummary {
+  final String id;
+  final int allocated;
+  final int weeklyAmount;
+  final int numberOfWeeks;
+  final DateTime? startDate;
+  final int? currentWeek;
+
+  const AllowancePlanSummary({
+    required this.id,
+    required this.allocated,
+    required this.weeklyAmount,
+    required this.numberOfWeeks,
+    required this.startDate,
+    required this.currentWeek,
+  });
+
+  factory AllowancePlanSummary.fromJson(Map<String, dynamic> json) {
+    return AllowancePlanSummary(
+      id: json['id']?.toString() ?? '',
+      allocated: parseMoney(json['allocated']),
+      weeklyAmount: parseMoney(json['weekly_amount']),
+      numberOfWeeks: parseMoney(json['number_of_weeks']),
+      startDate: DateTime.tryParse(json['start_date']?.toString() ?? '')
+          ?.toLocal(),
+      currentWeek: json['current_week'] as int?,
     );
   }
 }
 
 class DueAllowanceReleaseSummary {
   final String id;
+  final String? planId;
   final int weekNumber;
   final int amount;
   final DateTime? scheduledAt;
 
   const DueAllowanceReleaseSummary({
     required this.id,
+    required this.planId,
     required this.weekNumber,
     required this.amount,
     required this.scheduledAt,
@@ -170,6 +228,7 @@ class DueAllowanceReleaseSummary {
   factory DueAllowanceReleaseSummary.fromJson(Map<String, dynamic> json) {
     return DueAllowanceReleaseSummary(
       id: json['id']?.toString() ?? '',
+      planId: json['plan_id']?.toString(),
       weekNumber: parseMoney(json['week_number']),
       amount: parseMoney(json['amount']),
       scheduledAt: json['scheduled_at'] == null

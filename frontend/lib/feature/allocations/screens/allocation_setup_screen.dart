@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:frontend/feature/dashboard/providers/dashboard_provider.dart';
+import 'package:frontend/feature/auth/providers/auth_provider.dart';
 
 import '../models/allocation_setup_status.dart';
 import '../providers/allocation_provider.dart';
@@ -87,7 +88,18 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F8F8),
-      appBar: AppBar(title: const Text('Set up your allowance')),
+      appBar: AppBar(
+        title: const Text('Set up your allowance'),
+        actions: [
+          IconButton(
+            tooltip: 'Log out',
+            onPressed: () async {
+              await ref.read(authProvider.notifier).logout();
+            },
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
       body: setup.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => Center(
@@ -154,7 +166,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
           const SizedBox(height: 16),
           _SectionCard(
             title: '2. Set your weekly Spend',
-            subtitle: 'Your Spend amount will be released weekly.',
+            subtitle: 'Your first weekly allowance starts today, then repeats every 7 days.',
             child: Column(
               children: [
                 _MoneyField(
@@ -258,12 +270,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
     });
 
     final now = DateTime.now();
-    final daysUntilMonday = (DateTime.monday - now.weekday + 7) % 7;
-    final startDate = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).add(Duration(days: daysUntilMonday));
+    final startDate = DateTime(now.year, now.month, now.day);
 
     try {
       await AllocationService.setupAllocation(
@@ -273,7 +280,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
         weeklyAmount: weekly,
         numberOfWeeks: weeks,
         startDate: startDate,
-        releaseWeekday: 0,
+        releaseWeekday: now.weekday - 1,
         releaseTime: '09:00:00',
         goalLockAmount: goal,
         goalLockTargetAmount: goalTarget,
@@ -282,6 +289,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
       );
 
       ref.invalidate(allocationSetupStatusProvider);
+      await ref.read(allocationSetupStatusProvider.future);
       ref.invalidate(dashboardProvider);
 
       if (mounted) {

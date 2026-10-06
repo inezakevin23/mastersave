@@ -118,13 +118,19 @@ def create_allowance_payout(*, release, destination):
 
     if release.status != AllowanceRelease.Status.SCHEDULED:
         raise ValidationError(
-            {"release": "This allowance release is not scheduled."}
+            {"release": "This week's allowance has already been requested."}
         )
 
-    now = timezone.now()
-    if release.scheduled_at > now:
+    today = timezone.localdate()
+    current_release = (
+        AllowanceRelease.objects
+        .filter(plan=release.plan, scheduled_at__date__lte=today)
+        .order_by("-scheduled_at", "-week_number")
+        .first()
+    )
+    if current_release is None or current_release.pk != release.pk:
         raise ValidationError(
-            {"release": "This allowance release is not due yet."}
+            {"release": "Only the current week's allowance can be withdrawn."}
         )
 
     if destination.scholar_id != release.plan.scholar_id:

@@ -195,30 +195,7 @@ def setup_allocation(
             )
 
     # -------------------------------------------------
-    # 7. Prevent multiple active plans
-    # -------------------------------------------------
-
-    active_plan_exists = (
-        AllowancePlan.objects
-        .filter(
-            scholar=scholar,
-            status=AllowancePlan.Status.ACTIVE,
-        )
-        .exists()
-    )
-
-    if active_plan_exists:
-        raise ValidationError(
-            {
-                "spend": (
-                    "You already have an active "
-                    "allowance plan."
-                )
-            }
-        )
-
-    # -------------------------------------------------
-    # 8. Create allocation
+    # 7. Create allocation
     # -------------------------------------------------
 
     allocation = (
@@ -234,7 +211,7 @@ def setup_allocation(
     )
 
     # -------------------------------------------------
-    # 9. Create weekly Spend plan
+    # 8. Create weekly Spend plan
     # -------------------------------------------------
 
     plan = AllowancePlan.objects.create(
@@ -251,7 +228,7 @@ def setup_allocation(
     create_allowance_releases(plan)
 
     # -------------------------------------------------
-    # 10. Create Goal Lock
+    # 9. Create Goal Lock
     # -------------------------------------------------
 
     goal_bucket = None

@@ -204,13 +204,30 @@ class WithdrawalSerializer(serializers.Serializer):
                 pk=attrs["source_id"],
                 plan__scholar=scholar,
                 status=AllowanceRelease.Status.SCHEDULED,
-                scheduled_at__lte=timezone.now(),
+                scheduled_at__date__lte=timezone.localdate(),
             ).first()
             if release is None:
                 raise serializers.ValidationError(
                     {
                         "source_id": (
-                            "This allowance release is not due or does not belong to you."
+                            "Only the current week's allowance can be withdrawn."
+                        )
+                    }
+                )
+            current_release = (
+                AllowanceRelease.objects
+                .filter(
+                    plan=release.plan,
+                    scheduled_at__date__lte=timezone.localdate(),
+                )
+                .order_by("-scheduled_at", "-week_number")
+                .first()
+            )
+            if current_release is None or current_release.pk != release.pk:
+                raise serializers.ValidationError(
+                    {
+                        "source_id": (
+                            "Only the current week's allowance can be withdrawn."
                         )
                     }
                 )

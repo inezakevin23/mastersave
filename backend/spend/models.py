@@ -82,16 +82,6 @@ class AllowancePlan(models.Model):
     class Meta:
         ordering = ["-created_at"]
 
-        constraints = [
-            models.UniqueConstraint(
-                fields=["scholar"],
-                condition=models.Q(
-                    status="ACTIVE"
-                ),
-                name="one_active_allowance_plan_per_scholar",
-            ),
-        ]
-
     @property
     def total_amount(self):
         return self.source_allocation.spend_amount

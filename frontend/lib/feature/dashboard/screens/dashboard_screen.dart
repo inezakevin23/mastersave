@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../auth/models/auth_models.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../allocations/providers/allocation_provider.dart';
 import '../models/dashboard_models.dart';
 import '../providers/dashboard_provider.dart';
 
@@ -23,6 +24,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     with WidgetsBindingObserver {
   DashboardSection section = DashboardSection.spend;
   Timer? _refreshTimer;
+  bool _allocationNavigationPending = false;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       if (mounted &&
           WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         ref.read(dashboardProvider.notifier).refreshDashboard();
+        ref.invalidate(allocationSetupStatusProvider);
       }
     });
   }
@@ -40,6 +43,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       ref.read(dashboardProvider.notifier).refreshDashboard();
+      ref.invalidate(allocationSetupStatusProvider);
     }
   }
 
@@ -53,6 +57,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     final dashboard = ref.watch(dashboardProvider);
+    final allocationStatus = ref.watch(allocationSetupStatusProvider);
+
+    allocationStatus.whenData((status) {
+      if (status.hasUnallocatedDeposit && !_allocationNavigationPending) {
+        _allocationNavigationPending = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.go('/setup');
+        });
+      } else if (!status.hasUnallocatedDeposit) {
+        _allocationNavigationPending = false;
+      }
+    });
 
     final user = ref.watch(authProvider).user;
 
@@ -492,6 +508,10 @@ class _SpendSection extends StatelessWidget {
     final spend = data.spend;
     final currentRelease = spend.currentRelease;
     final nextRelease = spend.nextRelease;
+    final readyReleases = spend.withdrawalReleases;
+    final manualReleaseId = readyReleases.isNotEmpty
+        ? readyReleases.first.id
+        : null;
     final weeklyAmount = spend.weeklyAmount ?? 0;
     final releaseStatus = currentRelease?.status;
     final statusColor = switch (releaseStatus) {
@@ -584,6 +604,22 @@ class _SpendSection extends StatelessWidget {
             ],
           ),
         ),
+        if (manualReleaseId != null) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () =>
+                  context.push('/withdraw-allowance/$manualReleaseId'),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+              label: Text("Withdraw this week's allowance"),
+            ),
+          ),
+          const Text(
+            'Manual payout: you choose when to submit the request.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF536070)),
+          ),
+        ],
       ],
     );
   }
@@ -595,9 +631,7 @@ class _SpendSection extends StatelessWidget {
 
     final day = DateFormat('EEEE').format(date);
 
-    final time = DateFormat('h:mm a').format(date);
-
-    return 'Scheduled $day at $time';
+    return 'Available from $day';
   }
 }
 

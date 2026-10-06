@@ -99,7 +99,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       }
 
       if (mounted) {
-        context.go('/');
+        context.go('/startup');
       }
     } catch (error) {
       if (!mounted) {

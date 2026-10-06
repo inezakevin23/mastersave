@@ -54,8 +54,18 @@ class _AllowanceWithdrawalScreenState
           ),
         ),
         data: (data) {
-          final release = data.spend.withdrawalRelease;
-          if (release == null || release.id != widget.releaseId) {
+          DueAllowanceReleaseSummary? release;
+          for (final candidate in data.spend.withdrawalReleases) {
+            if (candidate.id == widget.releaseId) {
+              release = candidate;
+              break;
+            }
+          }
+          release ??= data.spend.withdrawalRelease?.id == widget.releaseId
+              ? data.spend.withdrawalRelease
+              : null;
+          final selectedRelease = release;
+          if (selectedRelease == null) {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(24),
@@ -71,13 +81,13 @@ class _AllowanceWithdrawalScreenState
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Week ${release.weekNumber}',
+                'Week ${selectedRelease.weekNumber}',
                 style: Theme.of(context).textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(
-                'RWF ${formatMoney(release.amount)}',
+                'RWF ${formatMoney(selectedRelease.amount)}',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 24),
@@ -155,7 +165,9 @@ class _AllowanceWithdrawalScreenState
               SizedBox(
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _submitting ? null : () => _submit(release.id),
+                  onPressed: _submitting
+                      ? null
+                      : () => _submit(selectedRelease.id),
                   child: _submitting
                       ? const SizedBox(
                           width: 22,
