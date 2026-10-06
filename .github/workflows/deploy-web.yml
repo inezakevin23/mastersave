@@ -19,11 +19,11 @@ jobs:
           channel: stable
 
       - name: Install dependencies
-        working-directory: frontend # Changed from 'mobile' to match your repo folder
+        working-directory: frontend
         run: flutter pub get
 
       - name: Build Flutter Web
-        working-directory: frontend # Changed from 'mobile' to match your repo folder
+        working-directory: frontend
         env:
           API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: |
@@ -31,9 +31,8 @@ jobs:
             --dart-define=API_BASE_URL=$API_BASE_URL
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: mastersave
-          directory: frontend/build/web # Changed from 'mobile' to match your repo folder
+          command: pages deploy frontend/build/web --project-name=mastersave
