@@ -3,16 +3,21 @@ from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from django.contrib import admin
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, override_settings
+from rest_framework.test import APIRequestFactory, force_authenticate
 
+from .admin import PayoutAdmin
 from .flutterwave import (
     FlutterwaveClient,
     FlutterwaveError,
     FlutterwaveTransportError,
 )
+from .mode import is_demo_mode
+from .models import Payout
 from .serializers import WithdrawalSerializer
-from .views import flutterwave_redirect
+from .views import WithdrawalView, flutterwave_redirect
 from .validators import (
     validate_rwf_amount,
     validate_verified_charge,
@@ -167,7 +172,98 @@ class FlutterwaveClientTests(SimpleTestCase):
             )
 
 
+class DemoPayoutAdminTests(SimpleTestCase):
+    @override_settings(DEBUG=True)
+    @patch.dict(os.environ, {"FLUTTERWAVE_MODE": "test"})
+    def test_demo_actions_enabled_only_in_debug_test_mode(self):
+        self.assertTrue(is_demo_mode())
+
+    @override_settings(DEBUG=False)
+    @patch.dict(os.environ, {"FLUTTERWAVE_MODE": "test"})
+    def test_demo_actions_disabled_when_debug_is_off(self):
+        self.assertFalse(is_demo_mode())
+
+    @override_settings(DEBUG=True)
+    @patch.dict(os.environ, {"FLUTTERWAVE_MODE": "test"})
+    def test_demo_actions_are_visible_in_payout_admin(self):
+        request = RequestFactory().get("/admin/payments/payout/")
+        request.user = SimpleNamespace(
+            is_active=True,
+            is_staff=True,
+            has_perm=lambda permission: True,
+        )
+
+        actions = PayoutAdmin(Payout, admin.site).get_actions(request)
+
+        self.assertIn("demo_mark_successful", actions)
+        self.assertIn("demo_mark_failed", actions)
+
+    @override_settings(DEBUG=True)
+    @patch.dict(os.environ, {"FLUTTERWAVE_MODE": "test"})
+    def test_demo_status_field_exposes_controlled_terminal_choices(self):
+        payout_admin = PayoutAdmin(Payout, admin.site)
+        request = RequestFactory().get("/admin/payments/payout/")
+        request.user = SimpleNamespace(
+            is_active=True,
+            is_staff=True,
+            has_perm=lambda permission: True,
+        )
+
+        readonly_fields = payout_admin.get_readonly_fields(
+            request,
+            obj=SimpleNamespace(status=Payout.Status.REQUESTED),
+        )
+        status_field = payout_admin.formfield_for_choice_field(
+            Payout._meta.get_field("status"),
+            request,
+        )
+
+        self.assertNotIn("status", readonly_fields)
+        self.assertIn(
+            (Payout.Status.SUCCESSFUL, "Demo: Successful"),
+            list(status_field.choices),
+        )
+        self.assertIn(
+            (Payout.Status.FAILED, "Demo: Failed"),
+            list(status_field.choices),
+        )
+
+
 class PaymentEndpointTests(SimpleTestCase):
+    @patch("payments.views.is_demo_mode", return_value=True)
+    @patch("payments.views.send_payout_to_flutterwave")
+    @patch("payments.views.WithdrawalSerializer")
+    @patch("payments.views.PayoutSerializer")
+    def test_demo_withdrawal_does_not_send_transfer(
+        self,
+        payout_serializer_class,
+        withdrawal_serializer_class,
+        send_transfer,
+        demo_mode,
+    ):
+        scholar = SimpleNamespace(is_authenticated=True)
+        payout = SimpleNamespace(
+            provider_status="",
+            raw_response={},
+            save=Mock(),
+        )
+        withdrawal_serializer = withdrawal_serializer_class.return_value
+        withdrawal_serializer.save.return_value = payout
+        payout_serializer_class.return_value.data = {"status": "REQUESTED"}
+
+        request = APIRequestFactory().post(
+            "/api/payments/withdrawals/",
+            data={},
+            format="json",
+        )
+        force_authenticate(request, user=scholar)
+
+        response = WithdrawalView.as_view()(request)
+
+        self.assertEqual(response.status_code, 202)
+        self.assertTrue(response.data["demo_mode"])
+        send_transfer.assert_not_called()
+
     @patch("payments.serializers.create_savings_withdrawal_payout")
     def test_withdrawal_serializer_maps_savings_bucket(self, create_payout):
         scholar = SimpleNamespace(id="scholar-id")
@@ -195,6 +291,34 @@ class PaymentEndpointTests(SimpleTestCase):
             bucket=bucket,
             destination=destination,
             amount=Decimal("1000"),
+        )
+
+    @patch("payments.serializers.create_allowance_payout")
+    def test_allowance_withdrawal_uses_server_release_amount(
+        self,
+        create_payout,
+    ):
+        scholar = SimpleNamespace(id="scholar-id")
+        release = SimpleNamespace(id="release-id")
+        destination = SimpleNamespace(id="destination-id")
+        request = SimpleNamespace(user=scholar)
+        serializer = WithdrawalSerializer(
+            context={"request": request}
+        )
+
+        payout = serializer.create(
+            {
+                "source_type": "ALLOWANCE",
+                "source_id": release.id,
+                "_release_instance": release,
+                "_destination_instance": destination,
+            }
+        )
+
+        self.assertIs(payout, create_payout.return_value)
+        create_payout.assert_called_once_with(
+            release=release,
+            destination=destination,
         )
 
     def test_redirect_requires_transaction_reference_and_id(self):

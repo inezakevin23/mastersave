@@ -140,8 +140,7 @@ def create_allowance_payout(*, release, destination):
         reference=generate_payout_reference(),
         destination=destination,
         allowance_release=release,
-        status=Payout.Status.PROCESSING,
-        initiated_at=now,
+        status=Payout.Status.REQUESTED,
     )
 
     release.status = AllowanceRelease.Status.PROCESSING
@@ -251,7 +250,7 @@ def send_payout_to_flutterwave(payout):
 def mark_payout_successful(*, payout, verified_data):
     payout = (
         Payout.objects
-        .select_for_update()
+        .select_for_update(of=("self",))
         .select_related(
             "scholar",
             "allowance_release",

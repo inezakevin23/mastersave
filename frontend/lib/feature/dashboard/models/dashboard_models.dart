@@ -261,6 +261,7 @@ class GrowSummary {
   final int available;
   final int investmentBalance;
   final int projectedReturn;
+  final List<GrowAllocationSummary> allocations;
   final List<InvestmentAccountSummary> accounts;
 
   const GrowSummary({
@@ -270,11 +271,13 @@ class GrowSummary {
     required this.available,
     required this.investmentBalance,
     required this.projectedReturn,
+    required this.allocations,
     required this.accounts,
   });
 
   factory GrowSummary.fromJson(Map<String, dynamic> json) {
     final rawAccounts = json['accounts'] as List? ?? [];
+    final rawAllocations = json['allocations'] as List? ?? [];
 
     return GrowSummary(
       allocated: parseMoney(json['allocated']),
@@ -283,6 +286,13 @@ class GrowSummary {
       available: parseMoney(json['available']),
       investmentBalance: parseMoney(json['investment_balance']),
       projectedReturn: parseMoney(json['projected_return']),
+      allocations: rawAllocations
+          .map(
+            (allocation) => GrowAllocationSummary.fromJson(
+              Map<String, dynamic>.from(allocation as Map),
+            ),
+          )
+          .toList(),
       accounts: rawAccounts
           .map(
             (account) => InvestmentAccountSummary.fromJson(
@@ -290,6 +300,32 @@ class GrowSummary {
             ),
           )
           .toList(),
+    );
+  }
+}
+
+class GrowAllocationSummary {
+  final String id;
+  final int allocated;
+  final int reserved;
+  final int invested;
+  final int available;
+
+  const GrowAllocationSummary({
+    required this.id,
+    required this.allocated,
+    required this.reserved,
+    required this.invested,
+    required this.available,
+  });
+
+  factory GrowAllocationSummary.fromJson(Map<String, dynamic> json) {
+    return GrowAllocationSummary(
+      id: json['allocation_id'].toString(),
+      allocated: parseMoney(json['allocated']),
+      reserved: parseMoney(json['reserved']),
+      invested: parseMoney(json['invested']),
+      available: parseMoney(json['available']),
     );
   }
 }

@@ -276,7 +276,11 @@ class _WithdrawalScreenState extends ConsumerState<WithdrawalScreen> {
         final messenger = ScaffoldMessenger.of(context);
         context.pop();
         messenger.showSnackBar(
-          const SnackBar(content: Text('Withdrawal submitted.')),
+          SnackBar(
+            content: Text(
+              response['message']?.toString() ?? 'Withdrawal submitted.',
+            ),
+          ),
         );
       }
     } catch (error) {

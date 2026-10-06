@@ -36,9 +36,8 @@ class SpendScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Weekly allowance',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -71,9 +70,8 @@ class SpendScreen extends ConsumerWidget {
                   SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed: () => context.push(
-                        '/withdraw-allowance/${due.id}',
-                      ),
+                      onPressed: () =>
+                          context.push('/withdraw-allowance/${due.id}'),
                       icon: const Icon(Icons.account_balance_wallet_outlined),
                       label: Text(
                         'Withdraw ${data.currency} ${formatMoney(due.amount)}',
@@ -83,7 +81,19 @@ class SpendScreen extends ConsumerWidget {
                 ] else if (current?.status == 'PROCESSING') ...[
                   const SizedBox(height: 12),
                   const Text(
-                    'Your transfer is processing. Its status will update after the provider confirms it.',
+                    'This allowance payout is already processing. Its status updates after the provider confirms it.',
+                    style: TextStyle(color: Color(0xFF536070)),
+                  ),
+                ] else if (current?.status == 'RELEASED') ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'This allowance has already been paid.',
+                    style: TextStyle(color: Color(0xFF536070)),
+                  ),
+                ] else if (current?.status == 'FAILED') ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'The last payout failed. Contact support before trying again.',
                     style: TextStyle(color: Color(0xFF536070)),
                   ),
                 ] else if (spend.nextRelease != null) ...[
@@ -91,6 +101,12 @@ class SpendScreen extends ConsumerWidget {
                   Text(
                     'Next release: ${spend.nextRelease!.scheduledAt?.toLocal() ?? 'Scheduled'}',
                     style: const TextStyle(color: Color(0xFF536070)),
+                  ),
+                ] else if (current == null) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No allowance is due for withdrawal yet.',
+                    style: TextStyle(color: Color(0xFF536070)),
                   ),
                 ],
               ],

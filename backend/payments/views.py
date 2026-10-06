@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 
 from .flutterwave import FlutterwaveError, FlutterwaveTransportError
 from .models import Payment, Payout, PayoutDestination
+from .mode import is_demo_mode
 from .payment_services import (
 	initiate_mobile_money_deposit,
 	verify_and_finalize_payment,
@@ -127,6 +128,31 @@ class WithdrawalView(APIView):
 		)
 		serializer.is_valid(raise_exception=True)
 		payout = serializer.save()
+		if is_demo_mode():
+			payout.provider_status = "DEMO_PENDING"
+			payout.raw_response = {
+				"demo_mode": True,
+				"status": "REQUESTED",
+			}
+			payout.save(
+				update_fields=[
+					"provider_status",
+					"raw_response",
+					"updated_at",
+				]
+			)
+			return Response(
+				{
+					"success": True,
+					"demo_mode": True,
+					"message": (
+						"Demo payout created. Use the Django admin demo action "
+						"to mark it successful or failed. No funds were sent."
+					),
+					"data": PayoutSerializer(payout).data,
+				},
+				status=status.HTTP_202_ACCEPTED,
+			)
 
 		try:
 			payout = send_payout_to_flutterwave(payout)

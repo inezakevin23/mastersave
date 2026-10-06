@@ -8,10 +8,7 @@ import '../../dashboard/providers/dashboard_provider.dart';
 import '../services/payment_service.dart';
 
 class AllowanceWithdrawalScreen extends ConsumerStatefulWidget {
-  const AllowanceWithdrawalScreen({
-    required this.releaseId,
-    super.key,
-  });
+  const AllowanceWithdrawalScreen({required this.releaseId, super.key});
 
   final String releaseId;
 
@@ -75,9 +72,8 @@ class _AllowanceWithdrawalScreenState
             children: [
               Text(
                 'Week ${release.weekNumber}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(context).textTheme.headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(
@@ -225,8 +221,11 @@ class _AllowanceWithdrawalScreenState
         final messenger = ScaffoldMessenger.of(context);
         context.pop();
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Payout submitted; waiting for provider confirmation.'),
+          SnackBar(
+            content: Text(
+              response['message']?.toString() ??
+                  'Payout submitted; waiting for provider confirmation.',
+            ),
           ),
         );
       }
@@ -238,8 +237,7 @@ class _AllowanceWithdrawalScreenState
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 }

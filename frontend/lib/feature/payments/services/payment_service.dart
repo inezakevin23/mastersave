@@ -110,25 +110,9 @@ class PaymentService {
   }
 
   static String _errorMessage(DioException error) {
-    final responseData = error.response?.data;
-    if (responseData is Map) {
-      final data = Map<String, dynamic>.from(responseData);
-      final detail = data['detail'];
-      if (detail is String && detail.isNotEmpty) {
-        return detail;
-      }
-
-      final errors = data['error'];
-      if (errors is Map) {
-        for (final value in errors.values) {
-          if (value is List && value.isNotEmpty) {
-            return value.first.toString();
-          }
-          if (value != null) {
-            return value.toString();
-          }
-        }
-      }
+    final responseMessage = _extractError(error.response?.data);
+    if (responseMessage != null && responseMessage.isNotEmpty) {
+      return responseMessage;
     }
 
     if (error.type == DioExceptionType.connectionTimeout ||
@@ -140,5 +124,46 @@ class PaymentService {
       return 'Unable to connect to MasterSave.';
     }
     return 'Unable to submit the withdrawal. Please try again.';
+  }
+
+  static String? _extractError(dynamic value) {
+    if (value is String) {
+      return value;
+    }
+    if (value is List) {
+      for (final item in value) {
+        final message = _extractError(item);
+        if (message != null && message.isNotEmpty) return message;
+      }
+      return null;
+    }
+    if (value is Map) {
+      for (final key in [
+        'detail',
+        'error',
+        'amount',
+        'source_id',
+        'destination',
+        'destination_id',
+        'network',
+        'phone_number',
+        'bank_code',
+        'branch_code',
+        'account_number',
+      ]) {
+        if (value.containsKey(key)) {
+          final message = _extractError(value[key]);
+          if (message != null && message.isNotEmpty) return message;
+        }
+      }
+      for (final entry in value.entries) {
+        if (entry.key == 'success') continue;
+        final message = _extractError(entry.value);
+        if (message != null && message.isNotEmpty) {
+          return '${entry.key}: $message';
+        }
+      }
+    }
+    return null;
   }
 }

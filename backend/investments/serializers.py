@@ -39,6 +39,11 @@ class InvestmentProductSerializer(
 class InvestmentRequestSerializer(
     serializers.ModelSerializer
 ):
+    product_name = serializers.CharField(
+        source="product.name",
+        read_only=True,
+    )
+
     source_allocation = (
         serializers.PrimaryKeyRelatedField(
             queryset=DepositAllocation.objects.all()
@@ -56,6 +61,7 @@ class InvestmentRequestSerializer(
             "id",
             "source_allocation",
             "product",
+            "product_name",
             "amount",
             "status",
             "reference",
