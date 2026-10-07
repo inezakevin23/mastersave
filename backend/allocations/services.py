@@ -214,18 +214,20 @@ def setup_allocation(
     # 8. Create weekly Spend plan
     # -------------------------------------------------
 
-    plan = AllowancePlan.objects.create(
-        scholar=scholar,
-        source_allocation=allocation,
-        weekly_amount=weekly_amount,
-        number_of_weeks=number_of_weeks,
-        start_date=start_date,
-        release_weekday=release_weekday,
-        release_time=release_time,
-        status=AllowancePlan.Status.ACTIVE,
-    )
+    plan = None
+    if spend_amount > 0:
+        plan = AllowancePlan.objects.create(
+            scholar=scholar,
+            source_allocation=allocation,
+            weekly_amount=weekly_amount,
+            number_of_weeks=number_of_weeks,
+            start_date=start_date,
+            release_weekday=release_weekday,
+            release_time=release_time,
+            status=AllowancePlan.Status.ACTIVE,
+        )
 
-    create_allowance_releases(plan)
+        create_allowance_releases(plan)
 
     # -------------------------------------------------
     # 9. Create Goal Lock
@@ -461,6 +463,10 @@ def get_setup_status(scholar):
         )
         .exists()
     )
+    spend_configured = (
+        allocation.spend_amount == 0
+        or spend_plan_exists
+    )
 
     savings_bucket_count = (
         SavingsBucket.objects
@@ -483,7 +489,7 @@ def get_setup_status(scholar):
 
     return {
         "setup_complete": (
-            spend_plan_exists
+            spend_configured
             and save_configured
         ),
         "has_successful_deposit": True,
@@ -501,7 +507,7 @@ def get_setup_status(scholar):
             "allocated": (
                 allocation.spend_amount
             ),
-            "configured": spend_plan_exists,
+            "configured": spend_configured,
         },
         "save": {
             "allocated": (

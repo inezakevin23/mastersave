@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,10 +31,19 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
   final _emergencyController = TextEditingController();
 
   bool _submitting = false;
+  Timer? _statusTimer;
 
   @override
   void initState() {
     super.initState();
+
+    // A successful deposit can arrive while this screen is already open.
+    // Refresh its status so the form does not stay stuck on the empty state.
+    _statusTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && !_submitting) {
+        ref.invalidate(allocationSetupStatusProvider);
+      }
+    });
 
     for (final controller in [
       _spendController,
@@ -50,6 +61,7 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _spendController.dispose();
     _saveController.dispose();
     _growController.dispose();
@@ -74,8 +86,9 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
   int get spend => _money(_spendController);
   int get save => _money(_saveController);
   int get grow => _money(_growController);
-  int get weekly => _money(_weeklyController);
-  int get weeks => int.tryParse(_weeksController.text.trim()) ?? 0;
+  int get weekly => spend == 0 ? 0 : _money(_weeklyController);
+  int get weeks =>
+      spend == 0 ? 0 : int.tryParse(_weeksController.text.trim()) ?? 0;
   int get goal => _money(_goalController);
   int get goalTarget => _money(_goalTargetController);
   int get emergency => _money(_emergencyController);
@@ -130,8 +143,10 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
     final remaining = total - allocated;
     final allocationValid = allocated == total;
     final saveValid = save == saveSplit;
-    final weeklyValid = weeks > 0 && weekly * weeks == spend;
-    final goalTargetValid = goalTarget > 0 && goalTarget >= goal;
+    final weeklyValid = spend == 0 || (weeks > 0 && weekly * weeks == spend);
+    final goalTargetValid = goal == 0
+        ? goalTarget >= 0
+        : goalTarget > 0 && goalTarget >= goal;
 
     return Form(
       key: _formKey,
@@ -167,7 +182,11 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
           _SectionCard(
             title: '2. Set your weekly Spend',
             subtitle: 'Your first weekly allowance starts today, then repeats every 7 days.',
-            child: Column(
+            child: spend == 0
+                ? const Text(
+                    'No weekly Spend plan is needed when your Spend allocation is RWF 0.',
+                  )
+                : Column(
               children: [
                 _MoneyField(
                   controller: _weeklyController,
@@ -277,8 +296,8 @@ class _AllocationSetupScreenState extends ConsumerState<AllocationSetupScreen> {
         spendAmount: spend,
         saveAmount: save,
         growAmount: grow,
-        weeklyAmount: weekly,
-        numberOfWeeks: weeks,
+        weeklyAmount: spend == 0 ? 0 : weekly,
+        numberOfWeeks: spend == 0 ? 0 : weeks,
         startDate: startDate,
         releaseWeekday: now.weekday - 1,
         releaseTime: '09:00:00',

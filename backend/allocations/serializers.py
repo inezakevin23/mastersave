@@ -56,11 +56,11 @@ class AllocationSetupSerializer(
     weekly_amount = serializers.DecimalField(
         max_digits=14,
         decimal_places=0,
-        min_value=1,
+        min_value=0,
     )
 
     number_of_weeks = serializers.IntegerField(
-        min_value=1,
+        min_value=0,
         max_value=52,
     )
 
@@ -83,7 +83,7 @@ class AllocationSetupSerializer(
         serializers.DecimalField(
             max_digits=14,
             decimal_places=0,
-            min_value=1,
+            min_value=0,
         )
     )
 
@@ -115,14 +115,23 @@ class AllocationSetupSerializer(
     )
 
     def validate(self, attrs):
-        expected_weekly_total = (
-            attrs["weekly_amount"]
-            * attrs["number_of_weeks"]
-        )
+        spend_amount = attrs["spend_amount"]
+        weekly_amount = attrs["weekly_amount"]
+        number_of_weeks = attrs["number_of_weeks"]
 
-        if (
-            expected_weekly_total
-            != attrs["spend_amount"]
+        if spend_amount == 0:
+            if weekly_amount != 0 or number_of_weeks != 0:
+                raise serializers.ValidationError(
+                    {
+                        "weekly_amount": (
+                            "Weekly budget and number of weeks must be "
+                            "zero when Spend allocation is zero."
+                        )
+                    }
+                )
+        elif (
+            number_of_weeks < 1
+            or weekly_amount * number_of_weeks != spend_amount
         ):
             raise serializers.ValidationError(
                 {
@@ -177,7 +186,7 @@ class AllocationSetupResponseSerializer(
     serializers.Serializer
 ):
     allocation = serializers.SerializerMethodField()
-    plan = AllowancePlanSerializer()
+    plan = AllowancePlanSerializer(allow_null=True)
     goal_bucket = SavingsBucketSerializer(
         allow_null=True
     )
