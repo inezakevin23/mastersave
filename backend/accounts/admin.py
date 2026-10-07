@@ -8,6 +8,10 @@ from .models import User
 class UserAdmin(BaseUserAdmin):
     ordering = ["email"]
 
+    # These fields are included in the change form's fieldsets but cannot be
+    # edited on the model (date_joined uses auto_now_add).
+    readonly_fields = ["last_login", "date_joined"]
+
     list_display = [
         "email",
         "first_name",
